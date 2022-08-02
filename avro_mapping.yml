@@ -1,4 +1,5 @@
 ---
+# Example DIDS mapping
 - !ruby/object:NdrImport::Table
   canonical_name: sheet_one
   filename_pattern: !ruby/regexp /.*\.csv\z/i
@@ -10,12 +11,10 @@
     # 1 M* n10
     mappings:
     - field: NHSNUMBER
-      avro_data_type: :string
   - column: NHS NUMBER STATUS INDICATOR CODE
     # 2 R an2
     mappings:
     - field: NHSNUMBERSTATUSINDICATORCODE
-      avro_data_type: :string
   - column: PERSON BIRTH DATE
     # 3 M* an10 CCYY-MM-DD
     mappings:
@@ -26,34 +25,28 @@
     # 4 M* max an2
     mappings:
     - field: ETHNICCATEGORY
-      avro_data_type: :string
   - column: PERSON GENDER CODE CURRENT
     # 5 M* an1
     mappings:
     - field: PERSONGENDERCODECURRENT
-      avro_data_type: :string
   - column: POSTCODE OF USUAL ADDRESS
     # 6 M* max an8
     mappings:
     - field: POSTCODEOFUSUALADDRESS
-      avro_data_type: :string
   - column: GENERAL MEDICAL PRACTICE CODE (PATIENT REGISTRATION)
     # 7 M* an6
   - column: PATIENT SOURCE SETTING TYPE (DIAGNOSTIC IMAGING)
     # 8 M an2
     mappings:
     - field: PATIENTSOURCESETTINGTYPE_DIAGNOSTICIMAGING
-      avro_data_type: :string
   - column: REFERRER CODE
     # 9 R an8
     mappings:
     - field: REFERRERCODE
-      avro_data_type: :string
   - column: REFERRING ORGANISATION CODE
     # 10 R max an6
     mappings:
     - field: REFERRINGORGANISATIONCODE
-      avro_data_type: :string
   - column: DIAGNOSTIC TEST REQUEST DATE
     # 11 R an10 CCYY-MM-DD
     mappings:
@@ -76,12 +69,10 @@
     # 14 M max an6
     mappings:
     - field: IMAGINGCODE_NICIP
-      avro_data_type: :string
-  - column: IMAGING CODE (SNOMED CT)
+  - column: IMAGING CODE (SNOMED-CT)
     # 15 M min an6, max n18
     mappings:
     - field: IMAGINGCODE_SNOMEDCT
-      avro_data_type: :string
   - column: SERVICE REPORT ISSUE DATE
     # 16 R an10 CCYY-MM-DD
     mappings:
@@ -92,9 +83,143 @@
     # 17 M min an5 max an9
     mappings:
     - field: SITECODE_OFIMAGING
-      avro_data_type: :string
   - column: RADIOLOGICAL ACCESSION NUMBER
     # 18 M max an20
     mappings:
     - field: RADIOLOGICALACCESSIONNUMBER
-      avro_data_type: :string
+
+# Example COG mapping
+- !ruby/object:NdrImport::Table
+  canonical_name: cog_collection
+  filename_pattern: !ruby/regexp /_Collection-.*-20.*\.xlsm\z/i
+  tablename_pattern: !ruby/regexp /Backsheet/i
+  header_lines: 1
+  footer_lines: 0
+  klass: Hash
+  columns:
+  - column: :filename
+    mappings:
+    - field: providercode
+      replace:
+      - ? !ruby/regexp /_Collection-.*-20.*\.xlsm\z/
+        : ''
+  - column: SQU03_5_3_1:N
+    mappings:
+    - field: SQU03_5_3_1
+      avro_data_type: :int
+  - column: SQU03_5_3_2:N
+    mappings:
+    - field: SQU03_5_3_2
+      avro_data_type: :int
+  - column: SQU03_6_2_1:N
+    mappings:
+    - field: SQU03_6_2_1
+      avro_data_type: :decimal
+      avro_data_type_options:
+        precision: 6
+        scale: 4
+  - column: SQU03_6_2_2:N
+    mappings:
+    - field: SQU03_6_2_2
+      avro_data_type: :array
+      avro_data_type_options:
+        items: :int
+        split: ','
+  - column: K1n:N
+    mappings:
+    - field: K1N
+      avro_data_type: :boolean
+  - column: K1m:D
+    mappings:
+    - field: K1M
+      format: "%Y-%m-%d"
+      avro_data_type: :date
+  - column: K150:N
+    mappings:
+    - field: K150
+  - column: K190:N
+    mappings:
+    - field: K190
+  - column: F1n:N
+    mappings:
+    - field: F1N
+  - column: F1t:N
+    mappings:
+    - field: F1T
+  - column: F1m:N
+    mappings:
+    - field: F1M
+  - column: F190:N
+    mappings:
+    - field: F190
+  - column: P1b:N
+    mappings:
+    - field: P1B
+  - column: P1n:N
+    mappings:
+    - field: P1N
+
+# Example PDF mapping
+- !ruby/object:NdrImport::NonTabular::Table
+  canonical_name: test_mapping
+  filename_pattern: !ruby/regexp /\.pdf\z/i
+  klass: Hash
+  start_line_pattern: !ruby/regexp /\ALab No:.*?Date received:.*?Primary Tumour Site:/
+  start_in_a_record: false
+  end_in_a_record: true
+  capture_start_line: true
+  remove_lines:
+    footer:
+    - !ruby/regexp /; MGP-1 NGS Somatic Mutation Analysis Report Page \d+ of \d+\z/
+  columns:
+  - column: servicereportidentifier
+    non_tabular_cell:
+      lines: 0
+      capture: !ruby/regexp /\ALab No:\s(.*?)\sDate received/
+    mappings:
+    - field: servicereportidentifier
+    - field: providercode
+      replace:
+      - ? !ruby/regexp /\A.*\z/
+        : 'RRV00'
+  - column: receiveddate
+    non_tabular_cell:
+      lines: 0
+      capture: !ruby/regexp /Date received:\s(.*?)\sPrimary/
+    mappings:
+    - field: receiveddate
+      format: '%d/%m/%Y'
+  - standard_mapping: surname
+    non_tabular_cell:
+      lines: 1
+      capture: !ruby/regexp /\ASurname:\s(.*?)\sSurgical/
+  - standard_mapping: forenames
+    non_tabular_cell:
+      lines: 2
+      capture: !ruby/regexp /\AForename:\s(.*?)\sSample Type/
+  - column: dateofbirth
+    non_tabular_cell:
+      lines: 3
+      capture: !ruby/regexp /\ADOB\s\(D\/M\/Y\):\s(.*?)\sTissue Type/
+    mappings:
+    - field: dateofbirth
+      format: '%d/%m/%Y'
+  - standard_mapping: sex
+    non_tabular_cell:
+      lines: 4
+      capture: !ruby/regexp /\AGender:\s(.*?)\sTumour Type/
+  - column: fulltextreport
+    non_tabular_cell:
+      lines: !ruby/object:RegexpRange
+        begin: !ruby/regexp /\AALL OTHER DETECTED VARIANTS:\z/
+  #      end: -70
+        end: !ruby/regexp /\AHow do we look for mutations\?\z/
+  #      end: !ruby/regexp /\ANOT DETECTED VARIANTS \(Frequency\<1%\)\z/
+        excl: true
+      capture: !ruby/regexp /\A(.*)\z/
+      join: "\n"
+    mappings:
+    - field: fulltextreport
+      replace:
+      - ? !ruby/regexp /(COMMENTS|ALL OTHER DETECTED VARIANTS\:|NOT DETECTED VARIANTS|TARGET REGIONS WITH INSUFFICIENT COVERAGE|UNASSIGNABLE VARIANTS\-\d+)/
+        : "\n\\1"
